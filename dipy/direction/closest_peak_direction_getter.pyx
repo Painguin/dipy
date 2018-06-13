@@ -5,6 +5,7 @@ from dipy.direction.peaks import peak_directions, default_sphere
 from dipy.direction.pmf cimport SimplePmfGen, SHCoeffPmfGen
 from dipy.reconst.shm import order_from_ncoef, sph_harm_lookup
 from dipy.tracking.local.direction_getter cimport DirectionGetter
+from dipy.utils.fast_numpy cimport copy_point, scalar_muliplication_point
 
 
 cdef int closest_peak(np.ndarray[np.float_t, ndim=2] peak_dirs,
@@ -19,7 +20,7 @@ cdef int closest_peak(np.ndarray[np.float_t, ndim=2] peak_dirs,
     peak_dirs : array (N, 3)
         N unit vectors.
     direction : array (3,) or None
-        Previous direction. The new direction is save here.
+        Previous direction. The new direction is saved here.
     cos_similarity : float
         `cos(max_angle)` where `max_angle` is the maximum allowed angle between
         prev_step and the returned direction.
@@ -45,16 +46,14 @@ cdef int closest_peak(np.ndarray[np.float_t, ndim=2] peak_dirs,
             closest_peak_dot = _dot
             closest_peak_i = i
 
-    if closest_peak_dot >= cos_similarity and closest_peak_i >= 0:
-        direction[0] = peak_dirs[closest_peak_i, 0]
-        direction[1] = peak_dirs[closest_peak_i, 1]
-        direction[2] = peak_dirs[closest_peak_i, 2]
-        return 0
-    elif closest_peak_dot <= -cos_similarity and closest_peak_i >= 0:
-        direction[0] = -peak_dirs[closest_peak_i, 0]
-        direction[1] = -peak_dirs[closest_peak_i, 1]
-        direction[2] = -peak_dirs[closest_peak_i, 2]
-        return 0
+    if closest_peak_i >= 0:
+        if closest_peak_dot >= cos_similarity:
+            copy_point(&peak_dirs[closest_peak_i, 0], direction)
+            return 0
+        if closest_peak_dot <= -cos_similarity:
+            copy_point(&peak_dirs[closest_peak_i, 0], direction)
+            scalar_muliplication_point(direction, -1)
+            return 0
     return 1
 
 cdef class BaseDirectionGetter(DirectionGetter):
@@ -196,7 +195,7 @@ cdef class PmfGenDirectionGetter(BaseDirectionGetter):
 cdef class ClosestPeakDirectionGetter(PmfGenDirectionGetter):
     """A direction getter that returns the closest odf peak to previous tracking
     direction.
-        """
+    """
 
     cdef int get_direction_c(self, double* point, double* direction):
         """

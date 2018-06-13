@@ -125,6 +125,7 @@ cdef class ProbabilisticDirectionGetter(PmfGenDirectionGetter):
         if direction[0] * newdir[0] \
          + direction[1] * newdir[1] \
          + direction[2] * newdir[2] > 0:
+
             direction[0] = newdir[0]
             direction[1] = newdir[1]
             direction[2] = newdir[2]
@@ -183,7 +184,7 @@ cdef class DeterministicMaximumDirectionGetter(ProbabilisticDirectionGetter):
             return 1
 
         newdir = self.vertices[max_idx]
-        # Update direction and return 0 for error
+        # Update direction
         if direction[0] * newdir[0] \
          + direction[1] * newdir[1] \
          + direction[2] * newdir[2] > 0:
